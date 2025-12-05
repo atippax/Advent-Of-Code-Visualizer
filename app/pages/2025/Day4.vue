@@ -1,30 +1,48 @@
 <script setup lang="ts">
-const data =  ref('')
+const data = ref('')
 const renderArray = computed(() => {
   // สร้างเป็น Array ของ Array: [[cell1, cell2, ...], [cell1, cell2, ...], ...]
-  return stateRender.value});
+  return stateRender.value
+});
 const state = ref<string[][]>([])
 const stateRender = ref<string[][]>([])
 const result = ref()
-onMounted(async()=>{
-  data.value = (await(await fetch('/inputExample/2025/day4.txt')).text())
-//   data.value = `..@@.@@@@.
-// @@@.@.@.@@
-// @@@@@.@.@@
-// @.@@@@..@.
-// @@.@@@@.@@
-// .@@@@@@@.@
-// .@.@.@.@@@
-// @.@@@.@@@@
-// .@@@@@@@@.
-// @.@.@@@.@.`
+onMounted(async () => {
+  data.value = (await (await fetch('/inputExample/2025/day4.txt')).text())
+  //   data.value = `..@@.@@@@.
+  // @@@.@.@.@@
+  // @@@@@.@.@@
+  // @.@@@@..@.
+  // @@.@@@@.@@
+  // .@@@@@@@.@
+  // .@.@.@.@@@
+  // @.@@@.@@@@
+  // .@@@@@@@@.
+  // @.@.@@@.@.`
   state.value = (createToArray(data.value))
-stateRender.value = state.value
-// result.value= await tryToRemoveUntilNotSomethingChange(state.value)
+  stateRender.value = state.value
+  // result.value= await tryToRemoveUntilNotSomethingChange(state.value)
 
 })
-function createToArray(text:string):string[][] {
-  return text.split("\n").reduce((arr:string[][], x:string) => {
+function* solveGenerator(initialState: string[][]): Generator<string[][]> {
+  let currentState = initialState;
+  // วนลูปการคำนวณ
+  while (true) {
+    // คำนวณ newState จาก currentState
+    const newState = computedNewState(currentState);
+
+    // Yield State ก่อนที่จะเช็คว่าเท่าเดิมหรือไม่ เพื่อให้ UI เห็น State นี้
+    yield newState;
+
+    // Check การหยุด
+    if (isEqualState(newState, currentState)) {
+      return;
+    }
+    currentState = newState;
+  }
+}
+function createToArray(text: string): string[][] {
+  return text.split("\n").reduce((arr: string[][], x: string) => {
     return [
       ...arr,
       x.split("").reduce((_s, v) => {
@@ -33,13 +51,13 @@ function createToArray(text:string):string[][] {
     ];
   }, [] as string[][]);
 }
-function filterOutboundPosition(position:{x:number,y:number}[], state:string[][]) {
+function filterOutboundPosition(position: { x: number, y: number }[], state: string[][]) {
   return position.filter(
     ({ x, y }) =>
-       (x >= 0 && y >= 0) || (y < state.length && state[y] &&x < (state[y].length))
+      (x >= 0 && y >= 0) || (y < state.length && state[y] && x < (state[y].length))
   );
 }
-function adjustcencyTemplate(position:[number,number]) {
+function adjustcencyTemplate(position: [number, number]) {
   return [
     { x: position[0] - 1, y: position[1] },
     { x: position[0] + 1, y: position[1] },
@@ -51,18 +69,18 @@ function adjustcencyTemplate(position:[number,number]) {
     { x: position[0] + 1, y: position[1] + 1 },
   ];
 }
-function isPaper(state:string[][], position:[number,number]) {
+function isPaper(state: string[][], position: [number, number]) {
   if (state[position[1]] == undefined) return false;
   const row = state[position[1]] ?? undefined;
-  if (row  == undefined|| !row[position[0]]==undefined) {
+  if (row == undefined || !row[position[0]] == undefined) {
     return false;
   }
-  if(row[position[0]] == undefined) return false;
+  if (row[position[0]] == undefined) return false;
   const item = row[position[0]];
   if (item == "@") return true;
   return false;
 }
-function getCountPaperAtThisAdjectcy(state:string[][], position:[number,number]) {
+function getCountPaperAtThisAdjectcy(state: string[][], position: [number, number]) {
   const tiles = filterOutboundPosition(adjustcencyTemplate(position), state);
   return tiles.reduce((sum, { x, y }) => {
     if (isPaper(state, [x, y])) return 1 + sum;
@@ -72,19 +90,18 @@ function getCountPaperAtThisAdjectcy(state:string[][], position:[number,number])
 
 
 // function
-function readRemove(state:string[][]) {
+function readRemove(state: string[][]) {
   return state.reduce((acc, x) => {
     return x.reduce((_acc, y) => (y == "x" ? _acc + 1 : _acc), acc);
   }, 0);
 }
-function clearSymbol(state:string[][]) {
+function clearSymbol(state: string[][]) {
   return state.reduce((acc, x) => {
     return [...acc, x.reduce((_acc, y) => [..._acc, y == "x" ? "." : y], [] as string[])];
   }, [] as string[][]);
 }
-interface S { indexY:number, indexX:number, symbol: string, count:number }
-async function tryToRemoveUntilNotSomethingChange(oldState:string[][]):Promise<number> {
- 
+interface S { indexY: number, indexX: number, symbol: string, count: number }
+function computedNewState(oldState: string[][]) {
   const newState = oldState
     .reduce((sum, x, indexY) => {
       return [
@@ -94,31 +111,25 @@ async function tryToRemoveUntilNotSomethingChange(oldState:string[][]):Promise<n
           return [...xumY, { indexY, indexX, symbol: y, count }];
         }, [] as S[]),
       ];
-    }, [] as S[][]) 
+    }, [] as S[][])
     .map((y) =>
       y.map((x) => (x.count < 4 && x.symbol == "@" ? "x" : x.symbol))
     );
-  // state.value = [...newState]
-console.log(oldState
-    .reduce((sum, x, indexY) => {
-      return [
-        ...sum,
-        x.reduce((xumY, y, indexX) => {
-          const count = getCountPaperAtThisAdjectcy(oldState, [indexX, indexY]);
-          return [...xumY, { indexY, indexX, symbol: y, count }];
-        }, [] as S[]),
-      ];
-    }, [] as S[][]) )
-    console.log('jkjkj')
+  return newState
+}
+async function tryToRemoveUntilNotSomethingChange(oldState: string[][]): Promise<number> {
+
+  const newState = computedNewState(oldState)
+
 
   const stateReadyToUse = clearSymbol(newState);
-  stateRender.value = [...newState]
+  //   stateRender.value = [...newState]
   //   console.log(readRemove(newState));
   //   console.table(newState);
   //   console.table(oldState);
   const isEqual = isEqualState(stateReadyToUse, oldState);
   console.log("eq", isEqual);
-  const  s = await new Promise((x,t)=>{
+  const s = await new Promise((x, t) => {
     setTimeout(() => {
       x('s')
     }, 200);
@@ -132,14 +143,93 @@ console.log(oldState
   //   console.log(newState);
   //   console.log();
 }
-function compareRow(rowNew:string[], rowOld:string[]) {
+// function* = Generator Function
+function* tryToRemoveGenerator(initialState: string[][]): Generator<string[][]> {
+  let oldState = initialState;
+
+  while (true) {
+    // 1. คำนวณ State ถัดไป (เหมือนที่คุณทำ)
+    const newStateData = oldState
+      .reduce((sum, x, indexY) => {
+        return [
+          ...sum,
+          x.reduce((xumY, y, indexX) => {
+            const count = getCountPaperAtThisAdjectcy(oldState, [indexX, indexY]);
+            return [...xumY, { indexY, indexX, symbol: y, count }];
+          }, [] as S[]),
+        ];
+      }, [] as S[][]);
+
+    // 2. แปลงให้เป็น Array 2 มิติ (แทน 'x' ด้วย '.')
+    const newState = newStateData.map((y) =>
+      y.map((x) => (x.count < 4 && x.symbol == "@" ? "x" : x.symbol))
+    );
+
+    const stateReadyToUse = clearSymbol(newState); // ได้ State สำหรับรอบถัดไป (ไม่มี 'x')
+
+    // 3. ส่งออก (yield) State ที่มี 'x' เพื่อให้ UI แสดงการเปลี่ยนแปลง
+    // (เราจะแสดง 'x' ชั่วคราว ก่อนที่จะ Clear เป็น '.')
+    yield newState;
+
+    // 4. เช็คเงื่อนไขหยุด: ถ้า State สำหรับรอบถัดไปเท่ากับ State ปัจจุบัน
+    if (isEqualState(stateReadyToUse, oldState)) {
+      // ต้อง Yield รอบสุดท้าย (State ที่ Clear 'x' แล้ว) ก่อนจบ
+      yield stateReadyToUse;
+      return;
+    }
+
+    // 5. เตรียม State สำหรับ Iteration ถัดไป
+    oldState = stateReadyToUse;
+  }
+}
+
+// ใน <script setup>
+
+// function สำหรับหน่วงเวลา 
+function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Consumer Function 
+async function startSolve() {
+  result.value = 'deleting . . .';
+  let removedCount = 0;
+
+  // 1. สร้าง Generator Instance
+  const solver = tryToRemoveGenerator(state.value);
+
+  // 2. เริ่มดึง State แรก
+  let nextState = solver.next();
+
+  // 3. Loop ตราบใดที่ Generator ยังไม่เสร็จ
+  while (!nextState.done) {
+    const currentState = nextState.value;
+
+    // อัปเดต State สำหรับ UI
+    stateRender.value = currentState;
+
+    // คำนวณจำนวนที่ถูกลบไปใน State ปัจจุบัน (ตัว 'x')
+    removedCount += readRemove(currentState);
+
+    // 4. ***หน่วงเวลา*** 🕒
+    await delay(300); // 300 มิลลิวินาที
+
+    // 5. ดึง State ถัดไป
+    nextState = solver.next();
+  }
+
+  // 6. อัปเดตผลลัพธ์สุดท้าย
+  result.value = removedCount;
+  console.log("Final Removed Count:", removedCount);
+}
+function compareRow(rowNew: string[], rowOld: string[]) {
   if (rowNew.length == 0 && rowOld.length == 0) return true;
   const [cellNew, ...otherCellNew] = rowNew;
   const [cellOld, ...otherCellOld] = rowOld;
   if (cellNew != cellOld) return false;
   return compareRow(otherCellNew, otherCellOld);
 }
-function isEqualState(newState:string[][], oldState:string[][]) {
+function isEqualState(newState: string[][], oldState: string[][]) {
   if (newState.length == 0 && oldState.length == 0) return true;
   const [rowNew, ...otherRowNew] = newState;
   const [rowOld, ...otherRowOld] = oldState;
@@ -149,41 +239,23 @@ function isEqualState(newState:string[][], oldState:string[][]) {
 </script>
 
 <template>
-  <button @click="(async()=>result = await tryToRemoveUntilNotSomethingChange(state))()">start solve</button>
-  {{ !result ?'deleteing . . .':result }}
- <div class="grid-container">
-    <div v-for="(row, rowIndex) in renderArray" :key="rowIndex" class="grid-row">
-      <div v-for="(cell, colIndex) in row" :key="colIndex" class="grid-cell">
-        {{ cell }}
-      </div>
+
+  <div class="flex justify-center h-full bg-red-100 p-4 flex-col">
+    <u-button @click="startSolve">start solve</u-button>
+      <div>
+      {{ !result ? 'deleteing . . .' : result }}
+    </div>
+
+    <div>
+      
+<!-- 
+      <div class="grid">
+        <div v-for="(row, rowIndex) in renderArray" :key="rowIndex" class="grid-row">
+          <div v-for="(cell, colIndex) in row" :key="colIndex" class="grid-cell">
+            {{ cell }}
+          </div>
+        </div>
+      </div> -->
     </div>
   </div>
 </template>
-
-<style scoped>
-.grid-container {
-  /* กำหนดขนาดหลักของตาราง */
-  display: grid; 
-  gap: 1px; /* ช่องว่างระหว่างแถว */
-  border: 1px solid #eee;
-}
-
-.grid-row {
-  /* ทำให้แต่ละแถวเป็น Grid/Flex ภายใน */
-  display: flex; /* หรือ display: grid; ถ้าต้องการกำหนดคอลัมน์ตายตัว */
-}
-
-.grid-cell {
-  /* กำหนดความกว้างและความสูงคงที่ (Fix-size) */
-  width: 10px; 
-  height: 10px; 
-
-  /* จัดให้อยู่ตรงกลางเซลล์ */
-  display: flex; 
-  justify-content: center; 
-  align-items: center; 
-
-  border: 1px solid #ddd;
-  font-family: 'Monaco', monospace; /* ยังคงแนะนำให้ใช้ Monospace */
-  font-weight: bold;
-}</style>

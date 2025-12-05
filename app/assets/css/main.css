@@ -1,0 +1,9 @@
+    @import "tailwindcss";
+    @import "@nuxt/ui";
+
+    /* Add any custom Tailwind theme customizations here */
+    @theme {
+      /* Example: Custom font families */
+      --font-sans: 'Public Sans', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
