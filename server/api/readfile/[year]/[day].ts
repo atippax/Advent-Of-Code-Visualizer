@@ -3,7 +3,7 @@
 export default defineEventHandler(async (event) => {
   const { year, day } = event.context.params as { year: string; day: string };
   const fileContent = await Bun.file(
-    `public\\inputExample\\${year}\\day${day}.txt`
+    `/inputExample\\${year}\\day${day}.txt`
   ).text();
   try {
     return fileContent;
