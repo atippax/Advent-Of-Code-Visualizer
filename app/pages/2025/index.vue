@@ -1,5 +1,5 @@
 <template>
-
+2025 Visualizations : The 12 Days Of Code  
 <li>
     <a href="/2025/day1">day1</a> <br>
     <a href="/2025/day2">day2</a><br></br>
